@@ -1,4 +1,4 @@
-# SSTable
+# Sorted string table
 Java implementation of immutable key-value storage based on sorted string table
 
 # How to use
