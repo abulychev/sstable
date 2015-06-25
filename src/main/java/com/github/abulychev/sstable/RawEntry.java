@@ -5,13 +5,13 @@ import java.nio.ByteBuffer;
 /**
  * Created by abulychev on 25.06.15.
  */
-public class DEntry {
+public class RawEntry {
     private final int shared;
     private final int nonshared;
     private final Slice nonsharedKey;
     private final Slice value;
 
-    public DEntry(int shared, int nonshared, Slice nonsharedKey, Slice value) {
+    public RawEntry(int shared, int nonshared, Slice nonsharedKey, Slice value) {
         assert nonshared == nonsharedKey.size();
 
         this.shared = shared;

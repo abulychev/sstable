@@ -12,8 +12,8 @@ import java.util.Comparator;
  */
 public class SSTableBuilder {
     private final ArrayList<Entry> data = new ArrayList<>();
-    private int maxBlockSize = 32;
-    private int maxBlockCapacity = 64 * 1024;
+    private int maxBlockSize = 16;
+    private int maxBlockCapacity = 4 * 1024;
     private boolean useBloomFilter = false;
 
     public SSTableBuilder setMaxBlockSize(int maxBlockSize) {

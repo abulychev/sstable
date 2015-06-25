@@ -6,14 +6,14 @@ import java.util.Iterator;
 /**
  * Created by abulychev on 23.06.15.
  */
-public class DEntryIterator implements Iterator<DEntry> {
+public class RawEntryIterator implements Iterator<RawEntry> {
     private final SliceInputStream is;
 
-    public DEntryIterator(Slice slice) {
+    public RawEntryIterator(Slice slice) {
         is = new SliceInputStream(slice);
     }
 
-    public DEntry next() {
+    public RawEntry next() {
         try {
             int shared = VariableLengthQuantity.readInt(is);
             int nonshared = VariableLengthQuantity.readInt(is);
@@ -22,7 +22,7 @@ public class DEntryIterator implements Iterator<DEntry> {
             Slice dKey = is.readSlice(nonshared);
             Slice value = is.readSlice(valueLength);
 
-            return new DEntry(shared, nonshared, dKey, value);
+            return new RawEntry(shared, nonshared, dKey, value);
 
         } catch (IOException e) {
             throw new RuntimeException(e);

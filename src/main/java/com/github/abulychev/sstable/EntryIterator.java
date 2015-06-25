@@ -6,22 +6,22 @@ import java.util.Iterator;
 /**
  * Created by abulychev on 23.06.15.
  */
-public class BlockIterator implements Iterator<Entry> {
-    private final Iterator<DEntry> it;
+public class EntryIterator implements Iterator<Entry> {
+    private final Iterator<RawEntry> it;
 
     private Slice previousKey = null;
 
-    public BlockIterator(Iterator<DEntry> it) {
+    public EntryIterator(Iterator<RawEntry> it) {
         this.it = it;
     }
 
-    public BlockIterator(Slice slice) {
-        this(new DEntryIterator(slice));
+    public EntryIterator(Slice slice) {
+        this(new RawEntryIterator(slice));
     }
 
     public Entry next() {
         try {
-            DEntry entry = it.next();
+            RawEntry entry = it.next();
 
             if (entry.getShared() != 0 && previousKey == null) {
                 throw new IOException("Invalid block: non zero shared prefix");

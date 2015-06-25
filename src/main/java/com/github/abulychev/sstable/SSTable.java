@@ -29,11 +29,11 @@ public class SSTable implements Iterable<Entry> {
         }
 
         int blockIndex = findBlock(key);
-        Iterator<DEntry> it = createDEntryIterator(blockIndex);
+        Iterator<RawEntry> it = createRawEntryIterator(blockIndex);
 
         int prefix = 0;
         while (it.hasNext()) {
-            DEntry e = it.next();
+            RawEntry e = it.next();
 
             if (e.getShared() < prefix) {
                 return null;
@@ -92,22 +92,22 @@ public class SSTable implements Iterable<Entry> {
     }
 
     private Slice firstKeyOfBlock(int blockIndex) {
-        Iterator<DEntry> it = createDEntryIterator(blockIndex);
+        Iterator<RawEntry> it = createRawEntryIterator(blockIndex);
         return it.next().getKey(null);
     }
 
-    private Iterator<DEntry> createDEntryIterator(int blockIndex) {
+    private Iterator<RawEntry> createRawEntryIterator(int blockIndex) {
         BlockHandle handle = index.get(blockIndex);
         Slice block = data.subslice(handle.getOffset(), handle.getSize());
-        return new DEntryIterator(block);
+        return new RawEntryIterator(block);
     }
 
     private Iterator<Entry> iterator(int blockIndex) {
-        Iterator<DEntry> it = createDEntryIterator(blockIndex);
-        return new BlockIterator(it);
+        Iterator<RawEntry> it = createRawEntryIterator(blockIndex);
+        return new EntryIterator(it);
     }
 
     public Iterator<Entry> iterator() {
-        return iterator(0);
+        return new EntryIterator(data);
     }
 }
