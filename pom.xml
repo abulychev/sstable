@@ -8,12 +8,17 @@
     <groupId>com.github.abulychev</groupId>
     <artifactId>sstable</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <packaging>pom</packaging>
 
     <description>Immutable key-value storage based on sorted string table</description>
     <url>http://github.com/abulychev/sstable</url>
 
     <dependencies>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>1.3.2</version>
+        </dependency>
+
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>

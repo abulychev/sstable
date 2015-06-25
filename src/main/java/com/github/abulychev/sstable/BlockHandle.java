@@ -1,17 +1,19 @@
 package com.github.abulychev.sstable;
 
+import com.google.common.primitives.Ints;
+
 /**
  * Created by abulychev on 22.06.15.
  */
-public class IndexEntry {
+public class BlockHandle {
+    public static final int SIZE = 2 * Ints.BYTES;
+
     private final int offset;
     private final int size;
-    private final byte[] key;
 
-    public IndexEntry(int offset, int size, byte[] key) {
+    public BlockHandle(int offset, int size) {
         this.offset = offset;
         this.size = size;
-        this.key = key;
     }
 
     public int getOffset() {
@@ -20,9 +22,5 @@ public class IndexEntry {
 
     public int getSize() {
         return size;
-    }
-
-    public byte[] getKey() {
-        return key;
     }
 }

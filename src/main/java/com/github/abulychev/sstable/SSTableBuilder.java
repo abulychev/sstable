@@ -1,7 +1,6 @@
 package com.github.abulychev.sstable;
 
 import com.google.common.hash.BloomFilter;
-import com.google.common.hash.Funnels;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -32,7 +31,7 @@ public class SSTableBuilder {
     }
 
     public SSTableBuilder put(byte[] key, byte[] value) {
-        data.add(new Entry(key, value));
+        data.add(new Entry(Slice.wrap(key), Slice.wrap(value)));
         return this;
     }
 
@@ -40,12 +39,11 @@ public class SSTableBuilder {
         try (SSTableWriter writer = new SSTableWriter(os)) {
             Collections.sort(data, comparator);
 
-            BloomFilter<byte[]> bloomFilter = useBloomFilter ?
-                    BloomFilter.create(Funnels.byteArrayFunnel(), data.size()) : null;
-
+            BloomFilter<Slice> bloomFilter = useBloomFilter ?
+                    BloomFilter.create(SliceFunnel.getInstance(), data.size()) : null;
 
             for (Entry e: data) {
-                byte[] key = e.getKey(), value = e.getValue();
+                Slice key = e.getKey(), value = e.getValue();
 
                 writer.writeEntry(key, value);
 
@@ -90,7 +88,7 @@ public class SSTableBuilder {
     private static final Comparator<Entry> comparator = new Comparator<Entry>() {
         @Override
         public int compare(Entry o1, Entry o2) {
-            return ByteUtils.getDefaultKeyComparator().compare(o1.getKey(), o2.getKey());
+            return o1.getKey().compareTo(o2.getKey());
         }
     };
 }

@@ -3,61 +3,111 @@ package com.github.abulychev.sstable;
 import com.google.common.hash.BloomFilter;
 
 import java.io.*;
-import java.nio.ByteBuffer;
 import java.util.*;
 
 /**
  * Created by abulychev on 22.06.15.
  */
-public class SSTable {
-    private static final Comparator<byte[]> comparator = ByteUtils.getDefaultKeyComparator();
+public class SSTable implements Iterable<Entry> {
+    private final Slice data;
+    private final Index index;
+    private final BloomFilter<Slice> bloomFilter;
 
-    private final ByteBuffer data;
-    private final List<IndexEntry> blocks;
-    private final BloomFilter<byte[]> bloomFilter;
-
-    public SSTable(ByteBuffer data, List<IndexEntry> blocks, BloomFilter<byte[]> bloomFilter) throws IOException {
+    public SSTable(Slice data, Index index, BloomFilter<Slice> bloomFilter) throws IOException {
         this.data = data;
-        this.blocks = blocks;
+        this.index = index;
         this.bloomFilter = bloomFilter;
     }
 
     public byte[] get(byte[] key) throws IOException {
+        return get(Slice.wrap(key));
+    }
+
+    public byte[] get(Slice key) throws IOException {
         if (bloomFilter != null && !bloomFilter.mightContain(key)) {
             return null;
         }
 
-        IndexEntry h = findBlock(key);
+        int blockIndex = findBlock(key);
+        Iterator<DEntry> it = createDEntryIterator(blockIndex);
 
-        ByteBuffer block = ByteBufferUtils.slice(data, h.getOffset(), h.getSize());
-        Iterator<Entry> it = new BlockIterator(block);
+        int prefix = 0;
         while (it.hasNext()) {
-            Entry e = it.next();
-            int c = comparator.compare(key, e.getKey());
-            if (c == 0) {
-                return e.getValue();
-            } else if (c < 0) {
+            DEntry e = it.next();
+
+            if (e.getShared() < prefix) {
                 return null;
+            } else if (e.getShared() == prefix) {
+                int c = key.compareTo(e.getNonSharedKey());
+                if (c == 0) {
+                    return e.getValue().toByteArray();
+                } else if (c < 0) {
+                    return null;
+                } else {
+                    prefix += c - 1;
+                    key = key.subslice(c - 1);
+                }
             }
         }
 
         return null;
     }
 
-    private IndexEntry findBlock(byte[] key) {
-        int l = 0, r = blocks.size() - 1;
-        while (l < r) {
-            int m = (l + r + 1) / 2;
-            IndexEntry h = blocks.get(m);
-            int c = comparator.compare(key, h.getKey());
+    private int findBlock(Slice key) {
+        int l = 0, r = index.size() - 1;
 
-            if (c >= 0) {
+        Slice lKey = firstKeyOfBlock(l);
+        Slice rKey = firstKeyOfBlock(r);
+
+        int c1 = key.compareTo(lKey);
+        if (c1 <= 0) {
+            return 0;
+        }
+
+        int c2 = key.compareTo(rKey);
+        if (c2 >= 0) {
+            return r;
+        }
+
+        int p1 = c1 - 1, p2 = -c2 - 1;
+        while (l < r) {
+            int p = Math.min(p1, p2);
+            Slice sKey = key.subslice(p);
+
+            int m = (l + r + 1) / 2;
+            Slice mKey = firstKeyOfBlock(m).subslice(p);
+
+            int c = sKey.compareTo(mKey);
+            if (c == 0) {
+                return m;
+            } else if (c > 0) {
                 l = m;
-                if (c == 0) r = m;
+                p1 = p + (c - 1);
             } else {
                 r = m - 1;
+                p2 = p + (-c - 1);
             }
         }
-        return blocks.get(l);
+        return l;
+    }
+
+    private Slice firstKeyOfBlock(int blockIndex) {
+        Iterator<DEntry> it = createDEntryIterator(blockIndex);
+        return it.next().getKey(null);
+    }
+
+    private Iterator<DEntry> createDEntryIterator(int blockIndex) {
+        BlockHandle handle = index.get(blockIndex);
+        Slice block = data.subslice(handle.getOffset(), handle.getSize());
+        return new DEntryIterator(block);
+    }
+
+    private Iterator<Entry> iterator(int blockIndex) {
+        Iterator<DEntry> it = createDEntryIterator(blockIndex);
+        return new BlockIterator(it);
+    }
+
+    public Iterator<Entry> iterator() {
+        return iterator(0);
     }
 }

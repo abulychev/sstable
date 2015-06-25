@@ -4,19 +4,19 @@ package com.github.abulychev.sstable;
  * Created by abulychev on 22.06.15.
  */
 public class Entry {
-    private final byte[] key;
-    private final byte[] value;
+    private final Slice key;
+    private final Slice value;
 
-    public Entry(byte[] key, byte[] value) {
+    public Entry(Slice key, Slice value) {
         this.key = key;
         this.value = value;
     }
 
-    public byte[] getKey() {
+    public Slice getKey() {
         return key;
     }
 
-    public byte[] getValue() {
+    public Slice getValue() {
         return value;
     }
 }

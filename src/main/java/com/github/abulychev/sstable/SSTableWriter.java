@@ -1,6 +1,7 @@
 package com.github.abulychev.sstable;
 
 import com.google.common.hash.BloomFilter;
+import org.apache.commons.io.IOUtils;
 
 import java.io.Closeable;
 import java.io.DataOutputStream;
@@ -17,13 +18,12 @@ public class SSTableWriter implements Closeable {
 
     /* Data */
     private int blockStart = 0;
-    private byte[] blockKey = null;
     private int blockSize = 0;
 
-    private byte[] pKey = null;
+    private Slice pKey = null;
 
     /* Index */
-    private final List<IndexEntry> indexEntries = new LinkedList<>();
+    private final List<BlockHandle> indexEntries = new LinkedList<>();
     private int indexOffset = 0;
 
     /* Bloom filter */
@@ -35,12 +35,11 @@ public class SSTableWriter implements Closeable {
 
     public void closeBlock() {
         if (blockSize > 0) {
-            IndexEntry e = new IndexEntry(blockStart, dos.size() - blockStart, blockKey);
+            BlockHandle e = new BlockHandle(blockStart, dos.size() - blockStart);
             indexEntries.add(e);
         }
 
         blockStart = dos.size();
-        blockKey = null;
         blockSize = 0;
         pKey = null;
     }
@@ -57,38 +56,36 @@ public class SSTableWriter implements Closeable {
         return dos.size();
     }
 
-    public void writeEntry(byte[] key, byte[] value) throws IOException {
-        int lcp = pKey == null ? 0 : ByteUtils.largestCommonPrefix(pKey, key);
+    public void writeEntry(Slice key, Slice value) throws IOException {
+        int lcp = pKey == null ? 0 : pKey.largestCommonPrefix(key);
+
+        Slice nonshared = key.subslice(lcp);
 
         VariableLengthQuantity.writeInt(lcp, dos);
-        VariableLengthQuantity.writeInt(key.length - lcp, dos);
-        VariableLengthQuantity.writeInt(value.length, dos);
+        VariableLengthQuantity.writeInt(key.size() - lcp, dos);
+        VariableLengthQuantity.writeInt(value.size(), dos);
 
-        dos.write(key, lcp, key.length - lcp);
-        dos.write(value);
+        IOUtils.copy(nonshared.getContent(), dos);
+        IOUtils.copy(value.getContent(), dos);
 
-        if (blockKey == null) blockKey = key;
         blockSize++;
 
         pKey = key;
-
     }
 
     public void writeIndex() throws IOException {
         indexOffset = dos.size();
-        for (IndexEntry e: indexEntries) {
-            writeIndexEntry(e.getOffset(), e.getSize(), e.getKey());
+        for (BlockHandle h: indexEntries) {
+            writeBlockHandle(h);
         }
     }
 
-    public void writeIndexEntry(int offset, int size, byte[] key) throws IOException {
-        dos.writeInt(offset);
-        dos.writeInt(size);
-        dos.writeInt(key.length);
-        dos.write(key);
+    public void writeBlockHandle(BlockHandle handle) throws IOException {
+        dos.writeInt(handle.getOffset());
+        dos.writeInt(handle.getSize());
     }
 
-    public void writeBloomFilter(BloomFilter<byte[]> filter) throws IOException {
+    public void writeBloomFilter(BloomFilter<Slice> filter) throws IOException {
         bloomFilterOffset = dos.size();
         filter.writeTo(dos);
     }

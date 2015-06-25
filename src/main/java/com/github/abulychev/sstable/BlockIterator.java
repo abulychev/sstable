@@ -1,40 +1,37 @@
 package com.github.abulychev.sstable;
 
-import java.io.DataInputStream;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.Iterator;
 
 /**
  * Created by abulychev on 23.06.15.
  */
 public class BlockIterator implements Iterator<Entry> {
-    private final DataInputStream dis;
-    byte[] pKey = null;
+    private final Iterator<DEntry> it;
 
-    public BlockIterator(ByteBuffer buffer) {
-        dis = new DataInputStream(new ByteBufferInputStream(buffer));
+    private Slice previousKey = null;
+
+    public BlockIterator(Iterator<DEntry> it) {
+        this.it = it;
+    }
+
+    public BlockIterator(Slice slice) {
+        this(new DEntryIterator(slice));
     }
 
     public Entry next() {
         try {
-            int lcp = VariableLengthQuantity.readInt(dis);
-            int l = VariableLengthQuantity.readInt(dis);
-            int valueLength = VariableLengthQuantity.readInt(dis);
-            byte[] key = new byte[lcp + l], value = new byte[valueLength];
+            DEntry entry = it.next();
 
-            if (pKey != null) {
-                System.arraycopy(pKey, 0, key, 0, lcp);
+            if (entry.getShared() != 0 && previousKey == null) {
+                throw new IOException("Invalid block: non zero shared prefix");
             }
-            // TODO: check the result
-            dis.read(key, lcp, l);
 
-            // TODO: do not read everything. We only need the last
-            dis.read(value);
+            Slice key = entry.getKey(previousKey);
 
-            pKey = key;
+            previousKey = key;
 
-            return new Entry(key, value);
+            return new Entry(key, entry.getValue());
 
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -42,10 +39,6 @@ public class BlockIterator implements Iterator<Entry> {
     }
 
     public boolean hasNext() {
-        try {
-            return dis.available() > 0;
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        return it.hasNext();
     }
 }

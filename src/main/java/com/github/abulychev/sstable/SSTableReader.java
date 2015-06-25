@@ -1,7 +1,6 @@
 package com.github.abulychev.sstable;
 
 import com.google.common.hash.BloomFilter;
-import com.google.common.hash.Funnels;
 
 import java.io.DataInputStream;
 import java.io.File;
@@ -10,8 +9,6 @@ import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Created by abulychev on 23.06.15.
@@ -27,47 +24,59 @@ public class SSTableReader {
 
     }
 
-    public SSTable from(ByteBuffer data) throws IOException {
-        int size = data.capacity();
+    public SSTable from(Slice data) throws IOException {
+        int size = data.size();
 
         int footerOffset = size - Constants.FOOTER_SIZE;
 
-        ByteBuffer footerData = ByteBufferUtils.slice(data, footerOffset, Constants.FOOTER_SIZE);
+        Slice footerData = data.subslice(footerOffset, Constants.FOOTER_SIZE);
         Footer footer = readFooter(footerData);
 
         if (footer.getVersion() > Constants.VERSION) {
             throw new IOException(String.format("Unsupported %d version of table", footer.getVersion()));
         }
 
-        BloomFilter<byte[]> bloomFilter;
+        BloomFilter<Slice> bloomFilter;
         int bloomFilterSize = footerOffset - footer.getBloomFilterOffset();
         if (bloomFilterSize > 0) {
-            ByteBuffer bloomFilterData = ByteBufferUtils.slice(data, footer.getBloomFilterOffset(), bloomFilterSize);
+            Slice bloomFilterData = data.subslice(footer.getBloomFilterOffset(), bloomFilterSize);
             bloomFilter = readBloomFilter(bloomFilterData);
         } else {
             bloomFilter = null;
         }
 
         int indexSize = footer.getBloomFilterOffset() - footer.getIndexOffset();
-        ByteBuffer indexData = ByteBufferUtils.slice(data, footer.getIndexOffset(), indexSize);
-        List<IndexEntry> blocks = readIndex(indexData);
+        Slice indexData = data.subslice(footer.getIndexOffset(), indexSize);
+        Index index = readIndex(indexData);
 
-        return new SSTable(data, blocks, bloomFilter);
+        return new SSTable(data.subslice(0, footer.getIndexOffset()), index, bloomFilter);
+    }
+
+    public SSTable from(ByteBuffer data) throws IOException {
+        return from(Slice.wrap(data));
     }
 
     public SSTable from(File file) throws IOException {
+        return from(file, false);
+    }
+
+    public SSTable from(File file, boolean force) throws IOException {
         try (RandomAccessFile raf = new RandomAccessFile(file, "r");
              FileChannel channel = raf.getChannel()) {
 
             int size = (int) channel.size();
             MappedByteBuffer data = channel.map(FileChannel.MapMode.READ_ONLY, 0, size);
 
+            if (force) {
+                data.load();
+            }
+
             return from(data);
         }
     }
 
-    private static Footer readFooter(ByteBuffer data) throws IOException {
-        DataInputStream is = new DataInputStream(new ByteBufferInputStream(data));
+    private static Footer readFooter(Slice data) throws IOException {
+        DataInputStream is = new DataInputStream(data.getContent());
 
         int indexPosition = is.readInt();
         int bloomFilterPosition = is.readInt();
@@ -76,23 +85,11 @@ public class SSTableReader {
         return new Footer(version, indexPosition, bloomFilterPosition);
     }
 
-    private static BloomFilter<byte[]> readBloomFilter(ByteBuffer data) throws IOException {
-        return BloomFilter.readFrom(new ByteBufferInputStream(data), Funnels.byteArrayFunnel());
+    private static BloomFilter<Slice> readBloomFilter(Slice data) throws IOException {
+        return BloomFilter.readFrom(data.getContent(), SliceFunnel.getInstance());
     }
 
-    private static List<IndexEntry> readIndex(ByteBuffer data) throws IOException {
-        List<IndexEntry> blocks = new ArrayList<>();
-
-        DataInputStream dis = new DataInputStream(new ByteBufferInputStream(data));
-        while (dis.available() > 0) {
-            int offset = dis.readInt();
-            int size = dis.readInt();
-            int l = dis.readInt();
-            byte[] key = new byte[l];
-            dis.read(key);
-            blocks.add(new IndexEntry(offset, size, key));
-        }
-
-        return blocks;
+    private static Index readIndex(Slice data) throws IOException {
+        return new Index(data);
     }
 }
