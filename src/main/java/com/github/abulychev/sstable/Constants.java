@@ -5,6 +5,4 @@ package com.github.abulychev.sstable;
  */
 public class Constants {
     public static final int VERSION = 1;
-    public static final int FOOTER_SIZE = 12;
-
 }

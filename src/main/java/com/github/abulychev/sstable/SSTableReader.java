@@ -27,9 +27,8 @@ public class SSTableReader {
     public SSTable from(Slice data) throws IOException {
         int size = data.size();
 
-        int footerOffset = size - Constants.FOOTER_SIZE;
-
-        Slice footerData = data.subslice(footerOffset, Constants.FOOTER_SIZE);
+        int footerOffset = size - Footer.SIZE;
+        Slice footerData = data.subslice(footerOffset, Footer.SIZE);
         Footer footer = readFooter(footerData);
 
         if (footer.getVersion() > Constants.VERSION) {
