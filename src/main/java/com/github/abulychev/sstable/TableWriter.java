@@ -13,7 +13,7 @@ import java.util.List;
 /**
  * Created by abulychev on 22.06.15.
  */
-public class SSTableWriter implements Closeable {
+public class TableWriter implements Closeable {
     private final DataOutputStream dos;
 
     /* Data */
@@ -29,7 +29,7 @@ public class SSTableWriter implements Closeable {
     /* Bloom filter */
     private int bloomFilterOffset = 0;
 
-    public SSTableWriter(OutputStream os) {
+    public TableWriter(OutputStream os) {
         dos = new DataOutputStream(os);
     }
 

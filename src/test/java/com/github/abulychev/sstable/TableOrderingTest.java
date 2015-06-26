@@ -11,19 +11,19 @@ import static org.junit.Assert.assertTrue;
 /**
  * Created by abulychev on 25.06.15.
  */
-public class SSTableOrderingTest {
+public class TableOrderingTest {
     private static final File file = new File("data.sst");
 
     @Test
     public void test() throws IOException {
-        SSTableBuilder builder = new SSTableBuilder();
+        TableBuilder builder = new TableBuilder();
         for (int i = 999; i >= 100; i--) {
             String key = String.valueOf(i);
             builder.put(key.getBytes(), key.getBytes());
         }
         builder.writeTo(file);
 
-        SSTable table = SSTableReader.getReader().from(file);
+        Table table = TableReader.getReader().from(file);
 
         int j = 100;
         for (Entry e: table) {

@@ -10,13 +10,13 @@ import java.util.Comparator;
 /**
  * Created by abulychev on 22.06.15.
  */
-public class SSTableBuilder {
+public class TableBuilder {
     private final ArrayList<Entry> data = new ArrayList<>();
     private int maxBlockSize = 16;
     private int maxBlockCapacity = 4 * 1024;
     private boolean useBloomFilter = false;
 
-    public SSTableBuilder setMaxBlockSize(int maxBlockSize) {
+    public TableBuilder setMaxBlockSize(int maxBlockSize) {
         this.maxBlockSize = maxBlockSize;
         return this;
     }
@@ -25,18 +25,18 @@ public class SSTableBuilder {
         this.maxBlockCapacity = maxBlockCapacity;
     }
 
-    public SSTableBuilder setUseBloomFilter(boolean useBloomFilter) {
+    public TableBuilder setUseBloomFilter(boolean useBloomFilter) {
         this.useBloomFilter = useBloomFilter;
         return this;
     }
 
-    public SSTableBuilder put(byte[] key, byte[] value) {
+    public TableBuilder put(byte[] key, byte[] value) {
         data.add(new Entry(Slice.wrap(key), Slice.wrap(value)));
         return this;
     }
 
     public void writeTo(OutputStream os) throws IOException {
-        try (SSTableWriter writer = new SSTableWriter(os)) {
+        try (TableWriter writer = new TableWriter(os)) {
             Collections.sort(data, comparator);
 
             BloomFilter<Slice> bloomFilter = useBloomFilter ?
@@ -75,7 +75,7 @@ public class SSTableBuilder {
     }
 
 
-    private boolean isBlockFull(SSTableWriter writer) {
+    private boolean isBlockFull(TableWriter writer) {
         if (maxBlockSize != -1 && maxBlockSize <= writer.getBlockSize()) {
             return true;
         }

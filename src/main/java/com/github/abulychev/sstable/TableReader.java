@@ -13,18 +13,18 @@ import java.nio.channels.FileChannel;
 /**
  * Created by abulychev on 23.06.15.
  */
-public class SSTableReader {
-    private static final SSTableReader reader = new SSTableReader();
+public class TableReader {
+    private static final TableReader reader = new TableReader();
 
-    public static SSTableReader getReader() {
+    public static TableReader getReader() {
         return reader;
     }
 
-    private SSTableReader() {
+    private TableReader() {
 
     }
 
-    public SSTable from(Slice data) throws IOException {
+    public Table from(Slice data) throws IOException {
         int size = data.size();
 
         int footerOffset = size - Footer.SIZE;
@@ -48,18 +48,18 @@ public class SSTableReader {
         Slice indexData = data.subslice(footer.getIndexOffset(), indexSize);
         Index index = readIndex(indexData);
 
-        return new SSTable(data.subslice(0, footer.getIndexOffset()), index, bloomFilter);
+        return new Table(data.subslice(0, footer.getIndexOffset()), index, bloomFilter);
     }
 
-    public SSTable from(ByteBuffer data) throws IOException {
+    public Table from(ByteBuffer data) throws IOException {
         return from(Slice.wrap(data));
     }
 
-    public SSTable from(File file) throws IOException {
+    public Table from(File file) throws IOException {
         return from(file, false);
     }
 
-    public SSTable from(File file, boolean force) throws IOException {
+    public Table from(File file, boolean force) throws IOException {
         try (RandomAccessFile raf = new RandomAccessFile(file, "r");
              FileChannel channel = raf.getChannel()) {
 

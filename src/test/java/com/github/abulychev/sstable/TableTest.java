@@ -15,7 +15,7 @@ import static org.junit.Assert.assertTrue;
  * Created by abulychev on 23.06.15.
  */
 @RunWith(Parameterized.class)
-public class SSTableTest {
+public class TableTest {
     private static final int N = 1000000;
 
     private static final Random r = new Random(1);
@@ -24,9 +24,9 @@ public class SSTableTest {
     private static Map<byte[], byte[]> map;
     private final boolean bloom;
 
-    private SSTable table;
+    private Table table;
 
-    public SSTableTest(boolean bloom) {
+    public TableTest(boolean bloom) {
         this.bloom = bloom;
     }
 
@@ -47,7 +47,7 @@ public class SSTableTest {
     @Before
     public void before() throws Exception {
         saveMapTo(map, file, bloom);
-        table = SSTableReader.getReader().from(file);
+        table = TableReader.getReader().from(file);
     }
 
     @After
@@ -87,7 +87,7 @@ public class SSTableTest {
     }
 
     private static void saveMapTo(Map<byte[], byte[]> m, File file, boolean bloom) throws IOException {
-        SSTableBuilder builder = new SSTableBuilder();
+        TableBuilder builder = new TableBuilder();
         builder.setUseBloomFilter(bloom);
         builder.setMaxBlockSize(32);
 

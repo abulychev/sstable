@@ -8,12 +8,12 @@ import java.util.*;
 /**
  * Created by abulychev on 22.06.15.
  */
-public class SSTable implements Iterable<Entry> {
+public class Table implements Iterable<Entry> {
     private final Slice data;
     private final Index index;
     private final BloomFilter<Slice> bloomFilter;
 
-    public SSTable(Slice data, Index index, BloomFilter<Slice> bloomFilter) throws IOException {
+    public Table(Slice data, Index index, BloomFilter<Slice> bloomFilter) throws IOException {
         this.data = data;
         this.index = index;
         this.bloomFilter = bloomFilter;
